@@ -1,148 +1,176 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { dracula } from 'react-syntax-highlighter/dist/esm/styles/prism'; // Choose a style
+// src/components/QuickSortVisualization.jsx
+import { useState, useEffect } from "react";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { dracula } from "react-syntax-highlighter/dist/esm/styles/prism";
+import ControlBar from "./ControlBar";
 
-function QuickSortVisualization() {
-  const [randomArray, setRandomArray] = useState([]);
-  const [steps, setSteps] = useState([]);
-  const [delay, setDelay] = useState(2000);
-  const stepsEndRef = useRef(null);
+export default function QuickSortVisualization() {
+  const [array, setArray] = useState([]);
+  const [speed, setSpeed] = useState(800);
+  const [isRunning, setIsRunning] = useState(false);
+  const [pivotIdx, setPivotIdx] = useState(null);
+  const [comparing, setComparing] = useState({ i: null, j: null });
+  const [swapping, setSwapping] = useState({ i: null, j: null });
+  const [sorted, setSorted] = useState([]);
+  const [stepCount, setStepCount] = useState(0);
 
-  const generateRandomArray = () => {
-    const newArray = Array.from({ length: 6 }, () => Math.floor(Math.random() * 100));
-    setRandomArray(newArray);
-    setSteps([]);
+  // ---------- Helpers ----------
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const resetStates = () => {
+    setPivotIdx(null);
+    setComparing({ i: null, j: null });
+    setSwapping({ i: null, j: null });
+    setSorted([]);
+    setStepCount(0);
   };
 
-  useEffect(() => {
-    generateRandomArray();
-  }, []);
+  const generate = () => {
+    const a = Array.from({ length: 10 }, () => Math.floor(Math.random() * 90) + 10);
+    setArray(a);
+    resetStates();
+    setIsRunning(false);
+  };
 
-  const quickSort = () => {
-    const newArray = [...randomArray];
-    const stepsArray = [];
-    const lastElement = newArray[newArray.length - 1];
+  useEffect(() => generate(), []);
 
-    stepsArray.push({
-      arr: [...newArray],
-      label: `partition around pivot ${lastElement} ( elements < ${lastElement} - leftside & elements > ${lastElement} - rightside )`,
-    });
+  // ---------- Core Animation ----------
+  const animateSwap = async (i, j) => {
+    setSwapping({ i, j });
+    await sleep(speed / 1.5);
+    setSwapping({ i: null, j: null });
+  };
 
-    const partition = (arr, low, high) => {
-      const pivot = arr[high];
+  // ---------- QuickSort ----------
+  const quickSort = async () => {
+    setIsRunning(true);
+    const arr = [...array];
+
+    const partition = async (low, high) => {
+      const pivotVal = arr[high];
+      setPivotIdx(high);
+      await sleep(speed / 2);
+
       let i = low - 1;
-      for (let j = low; j <= high - 1; j++) {
-        if (arr[j] < pivot) {
+      for (let j = low; j < high; j++) {
+        setComparing({ i: j, j: high });
+        setStepCount((c) => c + 1);
+        await sleep(speed);
+
+        if (arr[j] < pivotVal) {
           i++;
+          await animateSwap(i, j);
           [arr[i], arr[j]] = [arr[j], arr[i]];
+          setArray([...arr]);
         }
       }
+
+      await animateSwap(i + 1, high);
       [arr[i + 1], arr[high]] = [arr[high], arr[i + 1]];
-      stepsArray.push({
-        arr: [...arr],
-        label: `Partition Around Pivot (${arr[high]}) ( elements < ${arr[high]} - leftside & elements > ${arr[high]} - rightside )`,
-      });
+      setArray([...arr]);
+      setPivotIdx(null);
+      setComparing({ i: null, j: null });
       return i + 1;
     };
 
-    const quickSortHelper = (arr, low, high) => {
-      if (low < high) {
-        const pi = partition(arr, low, high);
-        quickSortHelper(arr, low, pi - 1);
-        quickSortHelper(arr, pi + 1, high);
+    const qs = async (low, high) => {
+      if (low >= high) {
+        setSorted((prev) => [...prev, low]);
+        return;
       }
+      const pi = await partition(low, high);
+      await Promise.all([qs(low, pi - 1), qs(pi + 1, high)]);
     };
 
-    quickSortHelper(newArray, 0, newArray.length - 1);
-    stepsArray.push({ arr: [...newArray], label: 'array sorted..' });
-
-    let delayTime = 0;
-    stepsArray.forEach((step, index) => {
-      setTimeout(() => {
-        setSteps((prevSteps) => [...prevSteps, step]);
-      }, delayTime);
-      delayTime += delay; // Increase delay for each step
-    });
+    await qs(0, arr.length - 1);
+    setSorted([...Array(arr.length).keys()]);
+    setIsRunning(false);
   };
 
-  const renderBox = (value) => (
-    <div className="bg-blue-500 text-white font-bold border border-blue-500 rounded-md w-16 h-16 flex items-center justify-center m-1 text-lg">
-      {value}
-    </div>
-  );
-
+  // ---------- UI ----------
   return (
-    <div className="container mx-auto w-4/5 2xl:w-3/5 mb-6">
-      <h1 className="text-3xl mb-4 xl:mb-8 font-bold">Quick Sort</h1>
-      <p className="mb-4 xl:mb-8 text-lg font-medium">
-        Quick Sort is a sorting algorithm that uses a divide-and-conquer strategy to sort an array.
-        It works by selecting a pivot element and partitioning the array into two subarrays - one with elements less than the pivot
-        and the other with elements greater than the pivot. This process is recursively applied to the subarrays until the entire array is sorted.
-      </p>
-      {/* Display the Quick Sort algorithm code */}
-      <SyntaxHighlighter language="javascript" style={dracula} className="mb-4">
-        {`
-// Function to perform Quick Sort
-const quickSort = (arr) => {
-  if (arr.length <= 1) {
-    return arr;
-  }
-
-  const pivot = arr[Math.floor(arr.length / 2)];
-  const left = [];
-  const right = [];
-
-  for (let i = 0; i < arr.length; i++) {
-    if (arr[i] < pivot) {
-      left.push(arr[i]);
-    } else if (arr[i] > pivot) {
-      right.push(arr[i]);
-    }
-  }
-
-  return [...quickSort(left), pivot, ...quickSort(right)];
-};
-
-// Example usage
-const arrayToSort = [3, 1, 4, 1, 5, 9, 2, 6, 5, 3, 5];
-const sortedArray = quickSort(arrayToSort);
-console.log(sortedArray); // Output: [1, 1, 2, 3, 3, 4, 5, 5, 5, 6, 9]
-        `}
-      </SyntaxHighlighter>
-      <div className="flex flex-wrap mb-6 mt-6 xl:mt-10 justify-center">
-        {randomArray.map((num, index) => (
-          <div key={index}>{renderBox(num)}</div>
-        ))}
+    <section className="max-w-6xl mx-auto p-6 bg-gradient-to-br from-indigo-50 to-purple-100 rounded-2xl shadow-lg mb-12 transition-all duration-500">
+      {/* Header */}
+      <div className="text-center mb-8">
+        <h2 className="text-4xl font-extrabold text-indigo-800 mb-1">Quick Sort Visualization</h2>
+        <p className="text-indigo-600">Observe each <span className="font-semibold">pivot</span>, comparison, and swap in real-time.</p>
       </div>
-      <div className='flex items-center justify-center mb-10'>
-        <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mr-2" onClick={generateRandomArray}>
-          Generate New Array
-        </button>
-        <button className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded" onClick={quickSort}>
-          Quick Sort
-        </button>
+
+      {/* Code Snippet */}
+      <div className="mb-8">
+        <SyntaxHighlighter language="javascript" style={dracula} className="rounded-xl text-xs md:text-sm">
+{`function quickSort(arr, low = 0, high = arr.length - 1) {
+  if (low >= high) return;
+  const pi = partition(arr, low, high);
+  quickSort(arr, low, pi - 1);
+  quickSort(arr, pi + 1, high);
+}`}
+        </SyntaxHighlighter>
       </div>
-      <div className="flex flex-col justify-center mt-4" style={{ display: 'flex', flexWrap: 'wrap' }}>
-        {steps.map((step, index) => (
-          <div key={index} className="flex flex-wrap justify-center mb-0">
-            {step.arr.map((num, innerIndex) => (
-              <div
-                key={innerIndex}
-                className="bg-yellow-300 text-black font-bold border border-yellow-300 rounded-md w-16 h-16 flex items-center justify-center text-lg mr-2 "
-              >
-                {num}
-              </div>
-            ))}
-            <div className="font-bold text-center" style={{ width: '100%' }}>{step.label}</div>
-            {index !== steps.length - 1 && ( // Check if it's not the last step
-              <div className="text-center mt-2 mb-2" style={{ width: '100%' }}>▼</div> // Arrow pointing down
-            )}
+
+      {/* Legend */}
+      <div className="flex flex-wrap justify-center gap-4 mb-8 text-sm">
+        {[
+          ["bg-indigo-500", "unsorted"],
+          ["bg-orange-400", "comparing"],
+          ["bg-red-600 ring-2 ring-red-300", "pivot"],
+          ["bg-emerald-600", "sorted"],
+        ].map(([color, label]) => (
+          <div key={label} className="flex items-center gap-2">
+            <div className={`w-5 h-5 rounded ${color}`} />
+            <span>{label}</span>
           </div>
         ))}
-        <div ref={stepsEndRef}>  </div> {/* Empty div to act as reference point for scrolling */}
       </div>
-    </div>
+
+      {/* Bars */}
+      <div className="flex justify-center items-end gap-2 md:gap-3 mb-8 h-64">
+        {array.map((val, idx) => {
+          const baseColor = sorted.includes(idx)
+            ? "bg-emerald-600"
+            : pivotIdx === idx
+            ? "bg-red-600 ring-4 ring-red-300"
+            : comparing.i === idx || comparing.j === idx
+            ? "bg-orange-400"
+            : "bg-indigo-500";
+
+          const translateClass =
+            swapping.i === idx
+              ? "animate-bounce translate-x-2"
+              : swapping.j === idx
+              ? "animate-bounce -translate-x-2"
+              : "";
+
+          return (
+            <div
+              key={idx}
+              className={`relative flex justify-center items-end w-6 md:w-10 rounded-t-lg text-white font-bold transition-all duration-500 ease-in-out transform ${baseColor} ${translateClass}`}
+              style={{ height: `${val * 2}px` }}
+            >
+              <span className="absolute -top-6 text-xs text-gray-700">{val}</span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Dynamic Info */}
+      {pivotIdx !== null && (
+        <p className="text-center text-base font-semibold text-red-700 mb-2 transition-all">
+          Pivot: <span className="text-red-900">{array[pivotIdx]}</span> (index {pivotIdx})
+        </p>
+      )}
+      <p className="text-center text-sm text-gray-600 mb-4">
+        Steps performed: <span className="font-bold text-indigo-800">{stepCount}</span>
+      </p>
+
+      {/* Controls */}
+      <ControlBar
+        speed={speed}
+        setSpeed={setSpeed}
+        onGenerate={generate}
+        onStart={quickSort}
+        isRunning={isRunning}
+        startLabel="Start Quick Sort"
+      />
+    </section>
   );
 }
-
-export default QuickSortVisualization;

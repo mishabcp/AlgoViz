@@ -1,175 +1,154 @@
-import React, { useState, useEffect } from 'react';
-import '/src/components/bubblesort.css'; // Make sure Tailwind CSS is imported in this file
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { dracula } from 'react-syntax-highlighter/dist/esm/styles/prism'; // Choose a style
+// src/components/BubbleSort.jsx
+import { useState, useEffect } from "react";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { dracula } from "react-syntax-highlighter/dist/esm/styles/prism";
+import ControlBar from "./ControlBar";
 
-function BubbleSort() {
+export default function BubbleSort() {
   const [array, setArray] = useState([]);
-  const [sortedArray, setSortedArray] = useState([]);
-  const [speed, setSpeed] = useState(400); // Default speed (milliseconds)
-  const [compareIndices, setCompareIndices] = useState({});
-  const [sortedIndices, setSortedIndices] = useState([]);
-  const [iterationCount, setIterationCount] = useState(0);
-  const [swapIndices, setSwapIndices] = useState({ index1: null, index2: null });
+  const [speed, setSpeed] = useState(500);
+  const [compare, setCompare] = useState({ i: null, j: null });
+  const [sorted, setSorted] = useState([]);
+  const [iteration, setIteration] = useState(0);
+  const [swapping, setSwapping] = useState({ i: null, j: null });
+  const [isRunning, setIsRunning] = useState(false);
 
-
-  // Generate a new random array
-  const generateArray = () => {
-    const newArray = Array.from({ length: 6 }, () => Math.floor(Math.random() * 100) + 1);
-    setArray(newArray);
-    setSortedArray([]);
-    setSortedIndices([]);
-    setIterationCount(0); // Reset iteration count
+  // Generate random array
+  const generate = () => {
+    const arr = Array.from({ length: 8 }, () => Math.floor(Math.random() * 90) + 10);
+    setArray(arr);
+    setSorted([]);
+    setCompare({ i: null, j: null });
+    setSwapping({ i: null, j: null });
+    setIteration(0);
+    setIsRunning(false);
   };
 
-  useEffect(() => {
-    generateArray(); // Call generateArray when the component mounts
-  }, []); 
+  useEffect(() => generate(), []);
 
-  const animateSwap = async (index1, index2) => {
-    setSwapIndices({ index1, index2 });
-    await new Promise(resolve => setTimeout(resolve, speed));
-    setSwapIndices({ index1: null, index2: null }); // Reset swapIndices after animation
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  const animateSwap = async (i, j) => {
+    setSwapping({ i, j });
+    await sleep(speed * 0.8);
+    setSwapping({ i: null, j: null });
   };
-  
 
   const bubbleSort = async () => {
-    const arrayCopy = [...array];
-    const n = arrayCopy.length;
-    let iterations = 0;
+    setIsRunning(true);
+    const arr = [...array];
+    let n = arr.length;
 
     for (let i = 0; i < n - 1; i++) {
       let swapped = false;
+
       for (let j = 0; j < n - i - 1; j++) {
-        setCompareIndices({ first: j, second: j + 1 }); // Highlight elements being compared
-        await new Promise(resolve => setTimeout(resolve, speed)); // Delay for visualization
+        setCompare({ i: j, j: j + 1 });
+        await sleep(speed);
 
-        if (arrayCopy[j] > arrayCopy[j + 1]) {
-
-          await animateSwap(j, j + 1); // Animate the swap
-          // Swap elements
-          const temp = arrayCopy[j];
-          arrayCopy[j] = arrayCopy[j + 1];
-          arrayCopy[j + 1] = temp;
+        if (arr[j] > arr[j + 1]) {
+          await animateSwap(j, j + 1);
+          [arr[j], arr[j + 1]] = [arr[j + 1], arr[j]];
+          setArray([...arr]);
           swapped = true;
-
-          // Update state for visualization and trigger swap animation
-          setArray([...arrayCopy]);
-          
-
-          // Delay after swap for visualization
-          await new Promise(resolve => setTimeout(resolve, speed)); // Delay after each swap
         }
       }
-      iterations++; // Increment iteration count
-      setIterationCount(iterations); // Update iteration count state
 
-      // Identify the last sorted index
-      const lastSortedIndex = n - i - 1;
+      setSorted((prev) => [...prev, n - i - 1]);
+      setIteration((prev) => prev + 1);
 
-      // Update state to highlight the sorted part
-      setCompareIndices({ sortedIndex: lastSortedIndex });
-      setSortedIndices(prevIndices => [...prevIndices, lastSortedIndex]); // Update sorted indices
-
-      // Delay after sorting the last element for visualization
-      await new Promise(resolve => setTimeout(resolve, speed));
-
-      // If no elements were swapped, array is sorted
       if (!swapped) break;
     }
 
-    // Remove comparison and sorting highlight after sorting is done
-    setCompareIndices({});
-    setSortedArray([...arrayCopy]); // Update state to display sorted array
-    setSortedIndices([]); // Reset sorted indices
+    setCompare({ i: null, j: null });
+    setIsRunning(false);
   };
-
-  // Handle speed change
-  const handleSpeedChange = e => {
-    setSpeed(Number(e.target.value));
-  };
-
 
   return (
-    <div className="mx-auto container w-4/5 2xl:w-3/5 mb-10 xl:mb-20">
-      <h1 className="text-5xl font-bold mb-10 mt-10 xl:mb-16 xl:mt-16">Sort and Search Visualizer</h1>
-      <div className="mb-6 xl:mb-10">
-        <h2 className="text-3xl font-bold mb-4 xl:mb-8">Bubble Sort</h2>
-        <p className='text-lg font-medium mb-4 xl:mb-8'>
-          Bubble Sort is a simple sorting algorithm that repeatedly steps through the list, compares adjacent elements, and swaps them if they are in the wrong order. The pass-through is repeated until no swaps are needed, which indicates that the list is sorted. It is named Bubble Sort because smaller elements "bubble" to the top of the list during each pass.
+    <section className="max-w-6xl mx-auto p-6 bg-gradient-to-br from-slate-50 to-indigo-100 rounded-2xl shadow-lg mb-12 transition-all duration-500">
+      {/* Header */}
+      <div className="text-center mb-8">
+        <h2 className="text-4xl font-extrabold text-indigo-700 mb-2">
+          Bubble Sort Visualization
+        </h2>
+        <p className="text-indigo-600">
+          Compare, swap, and rise to the top — the bubbles of sorting.
         </p>
-        <SyntaxHighlighter language="javascript" style={dracula}>
-          {`
-function bubbleSort(array) {
-  const n = array.length;
-  for (let i = 0; i < n - 1; i++) {
-    for (let j = 0; j < n - i - 1; j++) {
-      if (array[j] > array[j + 1]) {
-        const temp = array[j];
-        array[j] = array[j + 1];
-        array[j + 1] = temp;
-      }
+      </div>
+
+      {/* Code block */}
+      <SyntaxHighlighter
+        language="javascript"
+        style={dracula}
+        className="rounded-xl text-xs md:text-sm mb-8"
+      >
+{`function bubbleSort(arr) {
+  for (let i = 0; i < arr.length - 1; i++) {
+    for (let j = 0; j < arr.length - i - 1; j++) {
+      if (arr[j] > arr[j + 1])
+        [arr[j], arr[j + 1]] = [arr[j + 1], arr[j]];
     }
   }
-  return array;
-}
+  return arr;
+}`}
+      </SyntaxHighlighter>
 
-// Usage example:
-const myArray = [5, 3, 8, 1, 2];
-const sortedArray = bubbleSort(myArray);
-console.log(sortedArray); // Output: [1, 2, 3, 5, 8]
-          `}
-        </SyntaxHighlighter>
+      {/* Legend */}
+      <div className="flex flex-wrap justify-center gap-4 mb-8 text-sm font-medium">
+        {[
+          ["bg-indigo-500", "unsorted"],
+          ["bg-orange-400", "comparing"],
+          ["bg-emerald-600", "sorted"],
+        ].map(([color, label]) => (
+          <div key={label} className="flex items-center gap-2">
+            <div className={`w-5 h-5 rounded ${color}`} />
+            <span>{label}</span>
+          </div>
+        ))}
       </div>
-      {/* Your existing sorting visualizer components */}
-      <div className="flex flex-wrap gap-4 items-center justify-center mb-8">
-        {/* Array container */}
-        <div className="flex flex-wrap gap-2">
-          {array.map((value, idx) => (
+
+      {/* Bars / Visualizer */}
+      <div className="flex justify-center items-end gap-3 mb-8 h-64 transition-all duration-500">
+        {array.map((val, idx) => {
+          const baseColor = sorted.includes(idx)
+            ? "bg-emerald-600"
+            : compare.i === idx || compare.j === idx
+            ? "bg-orange-400"
+            : "bg-indigo-500";
+
+          const transform =
+            swapping.i === idx
+              ? "animate-swapPulse translate-x-2"
+              : swapping.j === idx
+              ? "animate-swapPulse -translate-x-2"
+              : "";
+
+          return (
             <div
               key={idx}
-              className={`BS-box BS-custom ${idx === compareIndices.first || idx === compareIndices.second ? 'BS-highlighted' : sortedIndices.includes(idx) ? 'BS-sorted' : ''}`}
-              style={{
-                transition: 'transform 0.3s ease-in-out', // Add transition for smooth animation
-                transform: idx === swapIndices.index1 ? 'translateX(32px) scale(1.2)' : idx === swapIndices.index2 ? 'translateX(-32px) scale(1.2)' : 'none',
-              }}
+              className={`relative flex justify-center items-end w-10 rounded-t-lg text-white font-bold transition-all duration-500 ease-in-out transform ${baseColor} ${transform}`}
+              style={{ height: `${val * 2.4}px` }}
             >
-              {value}
+              <span className="absolute -top-6 text-xs text-gray-700">{val}</span>
             </div>
-          ))}
-        </div>
-
-        {/* Buttons and speed control */}
-        <div className="flex gap-4">
-          <button className="btn px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600" onClick={generateArray}>
-            Generate New Array
-          </button>
-          <button className="btn px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600" onClick={bubbleSort}>
-            Bubble Sort
-          </button>
-        </div>
-          <div className='flex justify-center items-center'>
-            <label htmlFor="speedInput" className="text-lg mr-2">
-              Speed:
-            </label>
-            <input
-              type="range"
-              id="speedInput"
-              name="speedInput"
-              min="250"
-              max="750"
-              value={speed}
-              onChange={handleSpeedChange}
-              className="range-input mr-2"
-            />
-            <span className="text-lg">{speed} ms</span>
-          </div>
+          );
+        })}
       </div>
 
-      {/* Iteration count display */}
-      <div className="text-lg font-semibold">Iteration Count: {iterationCount}</div>
-    </div>
+      {/* Info */}
+      <p className="text-center text-sm text-gray-600 mb-4">
+        Iteration: <span className="font-bold text-indigo-800">{iteration}</span>
+      </p>
+
+      {/* Control Bar */}
+      <ControlBar
+        speed={speed}
+        setSpeed={setSpeed}
+        onGenerate={generate}
+        onStart={bubbleSort}
+        isRunning={isRunning}
+        startLabel="Start Bubble Sort"
+      />
+    </section>
   );
 }
-
-export default BubbleSort;

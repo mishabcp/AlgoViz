@@ -1,23 +1,30 @@
-// App.js
-import React from 'react';
-import BubbleSort from './components/BubbleSort.jsx';
-import QuickSortVisualization from '/src/components/QuickSort.jsx';
-import Footer from './components/Footer.jsx'; // Import Footer component
-import MergeSort from './components/MergeSort.jsx';
-import LinearSearch from './components/LinearSearch.jsx';
-import BinarySearch from './components/BinarySeach.jsx';
+import BubbleSort from "./components/BubbleSort";
+import QuickSortVisualization from "./components/QuickSort";
+import MergeSort from "./components/MergeSort";
+import LinearSearch from "./components/LinearSearch";
+import BinarySearch from "./components/BinarySearch";
+import Footer from "./components/Footer";
 
-function App() {
+export default function App() {
   return (
-    <div className="App">
-      <BubbleSort />
-      <QuickSortVisualization/>
-      <MergeSort/>
-      <LinearSearch/>
-      <BinarySearch/>
-      <Footer /> {/* Include Footer component */}
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
+      <header className="sticky top-0 z-10 bg-white shadow-md py-5">
+        <div className="max-w-6xl mx-auto px-4">
+          <h1 className="text-4xl font-extrabold text-indigo-700 text-center">
+            AlgoViz – Sorting & Searching
+          </h1>
+        </div>
+      </header>
+
+      <main className="py-8">
+        <BubbleSort />
+        <QuickSortVisualization />
+        <MergeSort />
+        <LinearSearch />
+        <BinarySearch />
+      </main>
+
+      <Footer />
     </div>
   );
 }
-
-export default App;

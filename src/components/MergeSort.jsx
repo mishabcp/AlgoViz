@@ -1,190 +1,165 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { dracula } from 'react-syntax-highlighter/dist/esm/styles/prism'; // Choose a style
+import { useState, useEffect } from "react";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { dracula } from "react-syntax-highlighter/dist/esm/styles/prism";
+import ControlBar from "./ControlBar";
 
-function MergeSort() {
-  const [randomArray, setRandomArray] = useState([]);
-  const [steps, setSteps] = useState([]);
-  const [delay, setDelay] = useState(2000);
-  const stepsEndRef = useRef(null);
+export default function MergeSort() {
+  const [array, setArray] = useState([]);
+  const [speed, setSpeed] = useState(600);
+  const [highlighted, setHighlighted] = useState([]);
+  const [sorted, setSorted] = useState([]);
+  const [isRunning, setIsRunning] = useState(false);
+  const [iteration, setIteration] = useState(0);
 
-  const generateRandomArray = () => {
-    const newArray = Array.from({ length: 6 }, () => Math.floor(Math.random() * 100));
-    setRandomArray(newArray);
-    setSteps([]);
+  // Generate random array
+  const generate = () => {
+    const arr = Array.from({ length: 8 }, () => Math.floor(Math.random() * 90) + 10);
+    setArray(arr);
+    setHighlighted([]);
+    setSorted([]);
+    setIsRunning(false);
+    setIteration(0);
   };
 
-  useEffect(() => {
-    generateRandomArray();
-  }, []);
+  useEffect(() => generate(), []);
 
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-  const mergeSort = () => {
-    const newArray = [...randomArray];
-    const stepsArray = [];
+  const mergeSort = async () => {
+    setIsRunning(true);
+    const arr = [...array];
 
-    const displaySplittingInfo = () => {
-      stepsArray.push({
-        arr: [...newArray],
-        label: `In the divide step of the merge sort algorithm, the original array is recursively split into smaller arrays or sublists until each sublist contains only one element. This process continues until you have "sublists" that are effectively individual elements, because a list with just one element is already considered sorted. Here's a step-by-step breakdown:`,
-      });
-      stepsArray.push({
-        arr: [...newArray],
-        label: `Divide it into two halves: [${newArray.slice(0, Math.floor(newArray.length / 2)).join(', ')}]    [${newArray.slice(Math.floor(newArray.length / 2)).join(', ')}]`,
-      });
-      stepsArray.push({
-        arr: [...newArray],
-        label: `Continue dividing recursively until each sublist has one element: [${newArray.join('] [')}]`,
-      });
-    };
+    async function mergeSortHelper(arr, l, r) {
+      if (l >= r) return;
+      const m = Math.floor((l + r) / 2);
+      await mergeSortHelper(arr, l, m);
+      await mergeSortHelper(arr, m + 1, r);
+      await merge(arr, l, m, r);
+    }
 
-    displaySplittingInfo();
-
-    const merge = (arr, left, middle, right) => {
-      const leftArray = arr.slice(left, middle + 1);
-      const rightArray = arr.slice(middle + 1, right + 1);
+    async function merge(arr, l, m, r) {
+      const left = arr.slice(l, m + 1);
+      const right = arr.slice(m + 1, r + 1);
       let i = 0,
         j = 0,
-        k = left;
+        k = l;
 
-      while (i < leftArray.length && j < rightArray.length) {
-        if (leftArray[i] <= rightArray[j]) {
-          arr[k++] = leftArray[i++];
+      setHighlighted([l, m + 1]);
+      await sleep(speed);
+
+      while (i < left.length && j < right.length) {
+        if (left[i] <= right[j]) {
+          arr[k++] = left[i++];
         } else {
-          arr[k++] = rightArray[j++];
+          arr[k++] = right[j++];
         }
+        setArray([...arr]);
+        await sleep(speed * 0.8);
       }
 
-      while (i < leftArray.length) {
-        arr[k++] = leftArray[i++];
+      while (i < left.length) {
+        arr[k++] = left[i++];
+        setArray([...arr]);
+        await sleep(speed * 0.8);
       }
 
-      while (j < rightArray.length) {
-        arr[k++] = rightArray[j++];
+      while (j < right.length) {
+        arr[k++] = right[j++];
+        setArray([...arr]);
+        await sleep(speed * 0.8);
       }
 
-      stepsArray.push({
-        arr: [...arr],
-        label: `Merge: [${leftArray.join(', ')}] and [${rightArray.join(', ')}] into [${arr.slice(left, right + 1).join(', ')}]`,
-      });
-    };
+      setIteration((prev) => prev + 1);
+    }
 
-    const split = (arr, left, right) => {
-      if (left < right) {
-        const middle = Math.floor((left + right) / 2);
-        split(arr, left, middle);
-        split(arr, middle + 1, right);
-        merge(arr, left, middle, right);
-      }
-
-    };
-
-    split(newArray, 0, newArray.length - 1);
-    stepsArray.push({ arr: [...newArray], label: 'Sorted Array' });
-
-    let delayTime = 0;
-    stepsArray.forEach((step, index) => {
-      setTimeout(() => {
-        setSteps((prevSteps) => [...prevSteps, step]);
-      }, delayTime);
-      delayTime += delay;
-    });
+    await mergeSortHelper(arr, 0, arr.length - 1);
+    setSorted([...arr]);
+    setHighlighted([]);
+    setIsRunning(false);
   };
 
-  const renderBox = (value) => (
-    <div className="bg-blue-500 text-white font-bold border border-blue-500 rounded-md w-16 h-16 flex items-center justify-center mx-1 my-1 text-lg">
-      {value}
-    </div>
-  );
-
   return (
-    <div className="container mx-auto w-4/5 2xl:w-3/5 mb-6">
-      <h1 className="text-3xl mb-4 xl:mb-8 font-bold">Merge Sort</h1>
-      <p className="mb-4 xl:mb-8 text-lg font-medium">
-        Merge Sort is a sorting algorithm that follows the divide-and-conquer strategy. It divides the array into two halves,
-        sorts them individually, and then merges them to produce a sorted array.
-      </p>
-      <SyntaxHighlighter language="javascript" style={dracula} className="">
-        {`
-function mergeSort(arr) {
-  if (arr.length <= 1) {
-    return arr;
-  }
+    <section className="max-w-6xl mx-auto p-6 bg-gradient-to-br from-slate-50 to-indigo-100 rounded-2xl shadow-lg mb-12 transition-all duration-500">
+      {/* Header */}
+      <div className="text-center mb-8">
+        <h2 className="text-4xl font-extrabold text-indigo-700 mb-2">
+          Merge Sort Visualization
+        </h2>
+        <p className="text-indigo-600">
+          Divide, conquer, and merge — a stable and elegant O(n log n) sort.
+        </p>
+      </div>
 
-  const middle = Math.floor(arr.length / 2);
-  const left = arr.slice(0, middle);
-  const right = arr.slice(middle);
-
-  return merge(mergeSort(left), mergeSort(right));
-}
-
-function merge(left, right) {
-  let result = [];
-  let leftIndex = 0;
-  let rightIndex = 0;
-
-  while (leftIndex < left.length && rightIndex < right.length) {
-    if (left[leftIndex] < right[rightIndex]) {
-      result.push(left[leftIndex]);
-      leftIndex++;
-    } else {
-      result.push(right[rightIndex]);
-      rightIndex++;
-    }
-  }
-
-  return result.concat(left.slice(leftIndex)).concat(right.slice(rightIndex));
-}
-
-const arr = [5, 3, 8, 6, 2, 7, 1, 4];
-const sortedArray = mergeSort(arr);
-console.log(sortedArray); // Output: [1, 2, 3, 4, 5, 6, 7, 8]
-`}
+      {/* Code Block */}
+      <SyntaxHighlighter
+        language="javascript"
+        style={dracula}
+        className="rounded-xl text-xs md:text-sm mb-8"
+      >
+{`function mergeSort(arr) {
+  if (arr.length <= 1) return arr;
+  const mid = Math.floor(arr.length / 2);
+  return merge(
+    mergeSort(arr.slice(0, mid)),
+    mergeSort(arr.slice(mid))
+  );
+}`}
       </SyntaxHighlighter>
-      <div className="flex flex-wrap mb-6 mt-6 xl:mt-10 justify-center">
-        {randomArray.map((num, index) => (
-          <div key={index}>{renderBox(num)}</div>
-        ))}
-      </div>
-      <div className="flex items-center justify-center mb-10">
-        <button
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mr-2"
-          onClick={generateRandomArray}
-        >
-          Generate New Array
-        </button>
-        <button
-          className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
-          onClick={mergeSort}
-        >
-          Merge Sort
-        </button>
-      </div>
-      <div className="flex flex-col justify-center mt-4" style={{ display: 'flex', flexWrap: 'wrap' }}>
-        {steps.map((step, index) => (
-          <div key={index} className="flex flex-wrap justify-center mb-0">
-            <div className="font-bold text-center mb-2" style={{ width: '100%' }}>
-              {step.label}
-            </div>
-            {step.arr.map((num, innerIndex) => (
-              <div
-                key={innerIndex}
-                className="bg-yellow-300 text-black font-bold border border-yellow-300 rounded-md w-16 h-16 flex items-center justify-center text-lg mr-2 "
-              >
-                {num}
-              </div>
-            ))}
-            {index !== steps.length - 1 && (
-              <div className="text-center mt-2 mb-2" style={{ width: '100%' }}>
-                ▼
-              </div>
-            )}
+
+      {/* Legend */}
+      <div className="flex flex-wrap justify-center gap-4 mb-8 text-sm font-medium">
+        {[
+          ["bg-indigo-500", "unsorted"],
+          ["bg-orange-400", "merging"],
+          ["bg-emerald-600", "sorted"],
+        ].map(([color, label]) => (
+          <div key={label} className="flex items-center gap-2">
+            <div className={`w-5 h-5 rounded ${color}`} />
+            <span>{label}</span>
           </div>
         ))}
-        <div ref={stepsEndRef}> </div>
       </div>
-    </div>
+
+      {/* Visualizer */}
+      <div className="flex justify-center items-end gap-3 mb-8 h-64 transition-all duration-500">
+        {array.map((val, idx) => {
+          const isHighlighted = highlighted.includes(idx);
+          const isSorted = sorted.includes(val);
+
+          const baseColor = isSorted
+            ? "bg-emerald-600"
+            : isHighlighted
+            ? "bg-orange-400 animate-swapPulse"
+            : "bg-indigo-500";
+
+          return (
+            <div
+              key={idx}
+              className={`relative flex justify-center items-end w-10 rounded-t-lg text-white font-bold transition-all duration-500 ease-in-out transform ${baseColor}`}
+              style={{
+                height: `${val * 2.4}px`,
+              }}
+            >
+              <span className="absolute -top-6 text-xs text-gray-700">{val}</span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Info */}
+      <p className="text-center text-sm text-gray-600 mb-4">
+        Merge Steps: <span className="font-bold text-indigo-800">{iteration}</span>
+      </p>
+
+      {/* Control Bar */}
+      <ControlBar
+        speed={speed}
+        setSpeed={setSpeed}
+        onGenerate={generate}
+        onStart={mergeSort}
+        isRunning={isRunning}
+        startLabel="Start Merge Sort"
+      />
+    </section>
   );
 }
-
-export default MergeSort;

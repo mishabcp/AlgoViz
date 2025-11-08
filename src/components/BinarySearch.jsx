@@ -3,22 +3,31 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { dracula } from "react-syntax-highlighter/dist/esm/styles/prism";
 import ControlBar from "./ControlBar";
 
-export default function LinearSearch() {
+export default function BinarySearch() {
   const [array, setArray] = useState([]);
   const [target, setTarget] = useState("");
-  const [foundIdx, setFoundIdx] = useState(null);
-  const [currIdx, setCurrIdx] = useState(-1);
-  const [speed, setSpeed] = useState(800);
+  const [low, setLow] = useState(0);
+  const [high, setHigh] = useState(-1);
+  const [mid, setMid] = useState(-1);
+  const [found, setFound] = useState(null);
+  const [speed, setSpeed] = useState(1200);
   const [msg, setMsg] = useState("");
   const [isRunning, setIsRunning] = useState(false);
 
-  // Generate a new random array
   const generate = () => {
-    const a = Array.from({ length: 16 }, () => Math.floor(Math.random() * 90) + 10);
+    const a = Array.from({ length: 16 }, () =>
+      Math.floor(Math.random() * 90) + 10
+    ).sort((x, y) => x - y);
     setArray(a);
-    setFoundIdx(null);
-    setCurrIdx(-1);
+    reset();
+  };
+
+  const reset = () => {
     setTarget("");
+    setLow(0);
+    setHigh(array.length - 1);
+    setMid(-1);
+    setFound(null);
     setMsg("");
     setIsRunning(false);
   };
@@ -30,26 +39,38 @@ export default function LinearSearch() {
   const search = async () => {
     const t = Number(target);
     if (isNaN(t)) return setMsg("⚠️ Please enter a valid number.");
-    setMsg("");
+    reset();
+    setHigh(array.length - 1);
     setIsRunning(true);
-    setFoundIdx(null);
 
-    for (let i = 0; i < array.length; i++) {
-      setCurrIdx(i);
-      setMsg(`🔍 Checking index ${i}: ${array[i]}`);
+    let l = 0;
+    let h = array.length - 1;
+
+    while (l <= h) {
+      const m = Math.floor((l + h) / 2);
+      setLow(l);
+      setHigh(h);
+      setMid(m);
+      setMsg(`🔍 Checking index ${m}: ${array[m]}`);
       await sleep(speed);
 
-      if (array[i] === t) {
-        setFoundIdx(i);
-        setMsg(`✅ Found ${t} at index ${i}!`);
+      if (array[m] === t) {
+        setFound(m);
+        setMsg(`✅ Found ${t} at index ${m}!`);
         setIsRunning(false);
-        setCurrIdx(-1);
         return;
+      } else if (array[m] < t) {
+        l = m + 1;
+        setMsg(`➡️ ${t} > ${array[m]} → search right`);
+      } else {
+        h = m - 1;
+        setMsg(`⬅️ ${t} < ${array[m]} → search left`);
       }
     }
 
-    setMsg("❌ Value not found in array.");
-    setCurrIdx(-1);
+    setFound(null);
+    setMid(-1);
+    setMsg("❌ Value not found.");
     setIsRunning(false);
   };
 
@@ -58,10 +79,10 @@ export default function LinearSearch() {
       {/* Header */}
       <div className="text-center mb-8">
         <h2 className="text-4xl font-extrabold text-indigo-700 mb-2">
-          Linear Search Visualization
+          Binary Search Visualization
         </h2>
         <p className="text-indigo-600">
-          Sequentially checks each element until a match is found.
+          Works only on sorted arrays – halves the search space each step.
         </p>
       </div>
 
@@ -71,9 +92,14 @@ export default function LinearSearch() {
         style={dracula}
         className="rounded-xl text-xs md:text-sm mb-8"
       >
-{`function linearSearch(arr, target) {
-  for (let i = 0; i < arr.length; i++)
-    if (arr[i] === target) return i;
+{`function binarySearch(arr, target) {
+  let l = 0, r = arr.length-1;
+  while (l <= r) {
+    const m = Math.floor((l+r)/2);
+    if (arr[m] === target) return m;
+    if (arr[m] < target) l = m+1;
+    else r = m-1;
+  }
   return -1;
 }`}
       </SyntaxHighlighter>
@@ -82,8 +108,9 @@ export default function LinearSearch() {
       <div className="flex flex-wrap justify-center gap-4 mb-8 text-sm font-medium">
         {[
           ["bg-indigo-500", "unsorted"],
-          ["bg-orange-400", "checking"],
+          ["bg-yellow-500", "mid/current"],
           ["bg-emerald-600", "found"],
+          ["ring-4 ring-indigo-300", "active range"],
         ].map(([color, label]) => (
           <div key={label} className="flex items-center gap-2">
             <div className={`w-5 h-5 rounded ${color}`} />
@@ -95,19 +122,22 @@ export default function LinearSearch() {
       {/* Array Visual */}
       <div className="flex flex-wrap justify-center gap-3 mb-8">
         {array.map((v, i) => {
-          const isChecking = currIdx === i;
-          const isFound = foundIdx === i;
+          const isMid = i === mid;
+          const isFound = i === found;
+          const inRange = i >= low && i <= high;
 
-          const color = isFound
+          const baseColor = isFound
             ? "bg-emerald-600 animate-swapPulse"
-            : isChecking
-            ? "bg-orange-400 scale-110"
+            : isMid
+            ? "bg-yellow-500 scale-110 z-10"
             : "bg-indigo-500";
 
           return (
             <div
               key={i}
-              className={`w-14 h-20 flex flex-col items-center justify-center rounded-lg text-white font-bold shadow transition-all duration-500 ease-in-out ${color}`}
+              className={`w-14 h-20 flex flex-col items-center justify-center rounded-lg text-white font-bold shadow transition-all duration-500 ease-in-out ${baseColor} ${
+                inRange ? "ring-4 ring-indigo-300 ring-offset-2" : ""
+              }`}
             >
               <span className="text-xs text-gray-100">{i}</span>
               <span className="text-lg">{v}</span>
@@ -116,7 +146,7 @@ export default function LinearSearch() {
         })}
       </div>
 
-      {/* Input + Search Controls */}
+      {/* Input + Controls */}
       <div className="flex flex-wrap justify-center gap-3 mb-6">
         <input
           type="number"
@@ -135,14 +165,14 @@ export default function LinearSearch() {
         </button>
       </div>
 
-      {/* Info Message */}
+      {/* Message */}
       {msg && (
         <p
           className={`text-center font-medium text-lg transition-all duration-500 ${
             msg.includes("Found")
               ? "text-emerald-700"
-              : msg.includes("Checking")
-              ? "text-orange-600"
+              : msg.includes("Checking") || msg.includes("➡️") || msg.includes("⬅️")
+              ? "text-yellow-600"
               : "text-gray-600"
           }`}
         >
@@ -158,7 +188,7 @@ export default function LinearSearch() {
           onGenerate={generate}
           onStart={() => {}}
           isRunning={isRunning}
-          startLabel="Linear Search"
+          startLabel="Binary Search"
         />
       </div>
     </section>
